@@ -1,0 +1,5 @@
+/**app.wxss — test project global styles (minimal)**/
+page {
+  background-color: #f5f5f5;
+  font-family: -apple-system, "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}

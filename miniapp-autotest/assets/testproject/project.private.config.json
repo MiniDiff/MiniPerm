@@ -1,0 +1,23 @@
+{
+  "description": "Project private configuration file. Contents of this file override the same fields in project.config.json. Project changes are synced to this file first. See docs: https://developers.weixin.qq.com/miniprogram/dev/devtools/projectconfig.html",
+  "projectname": "testproject",
+  "setting": {
+    "compileHotReLoad": true,
+    "urlCheck": true,
+    "coverView": true,
+    "lazyloadPlaceholderEnable": false,
+    "skylineRenderEnable": false,
+    "preloadBackgroundData": false,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "showES6CompileOption": false,
+    "bigPackageSizeSupport": false,
+    "useApiHook": true,
+    "checkInvalidKey": true,
+    "useStaticServer": false,
+    "useLanDebug": false,
+    "ignoreDevUnusedFiles": true
+  },
+  "libVersion": "3.17.1",
+  "condition": {}
+}

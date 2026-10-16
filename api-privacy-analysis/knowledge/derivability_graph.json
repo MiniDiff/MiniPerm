@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "1.1",
+  "description": "Seed data of the derivability knowledge graph, persistently reused across analysis tasks. When first analyzing a new functional domain, first search this file for reusable nodes / edges, then add new findings. Any added or modified edge must go through the confirmation-and-protection flow of SKILL.md Step 13; an analysis task must never silently rewrite this file. schemaVersion 1.1 introduces informationUnits: nodes that are deterministic functions of one another (zero conditional entropy) are explicitly grouped into one information unit, for direct use by section 1.1 \"closure expansion and information-unit folding\" of equivalence-path-validation-methodology.md, so that several derived representations of the same information are not double-counted when computing the equivalence degree.",
+  "nodes": [
+    { "id": "loc.precise_latlng", "domain": "location", "label": "precise latitude/longitude", "type": "continuous_geo" },
+    { "id": "loc.fuzzy_latlng", "domain": "location", "label": "fuzzy latitude/longitude", "type": "continuous_geo" },
+    { "id": "loc.altitude", "domain": "location", "label": "altitude", "type": "continuous_geo" },
+    { "id": "loc.speed", "domain": "location", "label": "instantaneous speed", "type": "continuous_geo" },
+    { "id": "loc.accuracy", "domain": "location", "label": "positioning accuracy radius", "type": "continuous_geo" },
+    { "id": "loc.city_id", "domain": "location", "label": "city code", "type": "categorical" },
+    { "id": "loc.city_name", "domain": "location", "label": "city name", "type": "categorical" },
+    { "id": "loc.address_text", "domain": "location", "label": "text address (province / city / district / street)", "type": "compound" },
+    { "id": "loc.map_center_latlng", "domain": "location", "label": "map component center latitude/longitude", "type": "continuous_geo" },
+    { "id": "loc.map_region_bbox", "domain": "location", "label": "map viewport bounding box", "type": "compound" },
+    { "id": "device.wifi_bssid", "domain": "device management", "label": "WiFi BSSID", "type": "categorical" },
+    { "id": "device.wifi_rssi", "domain": "device management", "label": "WiFi signal strength", "type": "continuous_geo" },
+    { "id": "device.beacon_uuid_major_minor_rssi", "domain": "device management", "label": "Beacon (iBeacon format) UUID + major + minor + RSSI", "type": "compound" },
+    { "id": "device.generic_ble_advertis_data", "domain": "device management", "label": "generic BLE device raw advertisement packet (manufacturer data byte segment + RSSI + device name / identifier)", "type": "compound" }
+  ],
+  "informationUnits": [
+    {
+      "unitId": "unit.loc_identity",
+      "label": "location identity information unit",
+      "members": ["loc.precise_latlng", "loc.city_id", "loc.city_name"],
+      "rationale": "city_id / city_name are both deterministic functions of precise_latlng (via reverse geocoding): H(city_id | precise_latlng) = H(city_name | precise_latlng) = 0, so they carry no information independent of precise_latlng and are folded into one information unit. A observed misuse: without folding, counting the literal fields of {precise latlng, city id, city name} vs {precise latlng} yields EquivDegree = 0.33; after folding the correct result is close to 1.0. See section 1.1 of equivalence-path-validation-methodology.md"
+    },
+    {
+      "unitId": "unit.ble_ibeacon_core",
+      "label": "iBeacon core information unit",
+      "members": ["device.beacon_uuid_major_minor_rssi"],
+      "rationale": "this unit can itself be obtained by locally parsing device.generic_ble_advertis_data according to the iBeacon manufacturer data format (see the corresponding edge below), so the closure of the generic BLE scanning path naturally covers this unit; the closure of the Beacon-specific API path is limited to this unit and cannot cover generic_ble_advertis_data in reverse (lossy post-processing, irreversible)"
+    }
+  ],
+  "edges": [
+    {
+      "from": "loc.map_center_latlng",
+      "to": "loc.precise_latlng",
+      "transform": "different carrier paths of the same attribute (after calling <map-writer-API> with no arguments, <map-reader-API> reads the map center point; <screen-coord-API> with the viewport center pixel coordinate reads the same value) — if the map center has already been aligned to the user real location through a legitimate authorization flow, the two should numerically point to the same coordinate",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "absolute", "value": null, "unit": "m", "source": "assumed" },
+      "resourceCost": { "externalCall": false, "requiresNetwork": false, "requiresThirdPartyService": null },
+      "directionality": "bidirectional",
+      "evidenceStrength": "code-confirmed",
+      "sourceAnalysis": "location-info-class analysis - 7-31 / location-info-class API analysis - 20260901",
+      "lastUpdatedRound": "20260901",
+      "notes": "a candidate member of an equivalence set built from a write-then-read composition (belongs to unit.loc_identity); not yet validated by the Step 10/11 TOST empirical tests, so errorBound.value remains to be filled in from measurement; the current evidenceStrength is based on line-by-line code evidence (state-coupling logic in the framework bundle), not empirical confirmation"
+    },
+    {
+      "from": "loc.precise_latlng",
+      "to": "loc.city_id",
+      "transform": "the city code field returned by reverse geocoding",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "categorical_mismatch_rate", "value": null, "unit": "none", "source": "assumed" },
+      "resourceCost": { "externalCall": true, "requiresNetwork": true, "requiresThirdPartyService": "reverse geocoding service (e.g. Tencent Maps / Amap API)" },
+      "directionality": "unidirectional",
+      "evidenceStrength": "assumed",
+      "sourceAnalysis": "verification-scenario generation: innovations and challenges - 20260902 (proposed at the methodology design stage, not empirically validated)",
+      "lastUpdatedRound": null,
+      "notes": "a constituent edge of unit.loc_identity; it illustrates that even if the direct return value of a path contains no city_id field, as long as the precise latlng is obtainable, city_id is still inside its derivable closure, so non-equivalence must not be concluded merely from a \"missing field\""
+    },
+    {
+      "from": "loc.precise_latlng",
+      "to": "loc.city_name",
+      "transform": "the city name field returned by reverse geocoding",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "categorical_mismatch_rate", "value": null, "unit": "none", "source": "assumed" },
+      "resourceCost": { "externalCall": true, "requiresNetwork": true, "requiresThirdPartyService": "reverse geocoding service (e.g. Tencent Maps / Amap API)" },
+      "directionality": "unidirectional",
+      "evidenceStrength": "assumed",
+      "sourceAnalysis": "verification-scenario generation: innovations and challenges - 20260902 (proposed at the methodology design stage, not empirically validated)",
+      "lastUpdatedRound": null,
+      "notes": "a constituent edge of unit.loc_identity"
+    },
+    {
+      "from": "loc.city_id",
+      "to": "loc.city_name",
+      "transform": "lookup in a city code mapping table (each platform / map vendor usually maintains this static mapping)",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "categorical_mismatch_rate", "value": 0, "unit": "none (near-lossless lookup)", "source": "assumed" },
+      "resourceCost": { "externalCall": false, "requiresNetwork": false, "requiresThirdPartyService": null },
+      "directionality": "bidirectional",
+      "evidenceStrength": "assumed",
+      "sourceAnalysis": "verification-scenario generation: innovations and challenges - 20260902",
+      "lastUpdatedRound": null,
+      "notes": "city id and city name are near-lossless bidirectional mappings of each other, further confirming that both belong to the same information unit as the precise latlng, rather than being counted independently"
+    },
+    {
+      "from": "loc.precise_latlng",
+      "to": "loc.fuzzy_latlng",
+      "transform": "coordinate quantization / truncation (reducing decimal precision or adding a random offset)",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "absolute", "value": null, "unit": "m", "source": "assumed" },
+      "resourceCost": { "externalCall": false, "requiresNetwork": false, "requiresThirdPartyService": null },
+      "directionality": "unidirectional",
+      "evidenceStrength": "doc-confirmed",
+      "sourceAnalysis": "location-info-class API analysis - 20260901 (Step 7 documentation-code cross validation: the concrete strength of the <fuzzy-locate-API> fuzzing algorithm lacks quantified documentation and code evidence)",
+      "lastUpdatedRound": "20260901",
+      "notes": "an example of a directed lossy edge: precise -> fuzzy holds, the reverse (fuzzy_latlng -> precise_latlng) does not, so the reverse edge must not be registered in the graph"
+    },
+    {
+      "from": "loc.precise_latlng",
+      "to": "loc.speed",
+      "transform": "call the same path k times consecutively, take the spherical distance (Haversine) between two adjacent coordinates divided by the call time difference, and differentiate numerically to estimate speed",
+      "temporal": { "required": true, "k": 2, "deltaT": "2-5 s recommended; must be smaller than the path own cache / throttle window" },
+      "errorBound": { "type": "relative", "value": null, "unit": "none", "source": "assumed" },
+      "resourceCost": { "externalCall": false, "requiresNetwork": false, "requiresThirdPartyService": null },
+      "directionality": "unidirectional",
+      "evidenceStrength": "assumed",
+      "sourceAnalysis": "verification-scenario generation: innovations and challenges - 20260902 (a temporal-derivability example proposed at the methodology design stage, not empirically validated)",
+      "lastUpdatedRound": null,
+      "notes": "an example of a temporal derivability edge: for a path that returns only coordinates and no speed field, if consecutive calls are allowed, its derivable closure may still cover the speed attribute under the sampling strategy (k=2, deltaT); the errorBound of this edge must be filled in after the Step 11 empirical test (TOST comparing this path numerical differentiation result with the speed field declared by <baseline-locate-API>); it is currently an assumption awaiting validation"
+    },
+    {
+      "from": "device.wifi_bssid",
+      "to": "loc.precise_latlng",
+      "transform": "look up coordinates against a third-party WiFi geolocation database (indoor positioning)",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "absolute", "value": null, "unit": "m (shelf-level, coarsely estimated within tens of meters)", "source": "documented" },
+      "resourceCost": { "externalCall": true, "requiresNetwork": true, "requiresThirdPartyService": "third-party WiFi geolocation database (e.g. vendor WiFi positioning services)" },
+      "directionality": "unidirectional",
+      "evidenceStrength": "doc-confirmed",
+      "sourceAnalysis": "location-info-class API analysis - 20260901 (pattern D1 cross-functional-domain substitute channel: <wifi-scan-API> and <baseline-locate-API> share the <scope-id> scope group)",
+      "lastUpdatedRound": "20260901",
+      "notes": "an example of a cross-functional-domain derivable edge — used to support quantitative validation of the pattern D1 \"different review criteria\" equivalence channel"
+    },
+    {
+      "from": "device.generic_ble_advertis_data",
+      "to": "device.beacon_uuid_major_minor_rssi",
+      "transform": "parse the advertisement packet locally according to the iBeacon protocol manufacturer data byte format (prefix + UUID + major + minor + measured power); no external service needed",
+      "temporal": { "required": false, "k": null, "deltaT": null },
+      "errorBound": { "type": "categorical_mismatch_rate", "value": 0, "unit": "none (a format match means deterministic parsing; a mismatch means the device is not an iBeacon)", "source": "assumed" },
+      "resourceCost": { "externalCall": false, "requiresNetwork": false, "requiresThirdPartyService": null },
+      "directionality": "unidirectional",
+      "evidenceStrength": "assumed",
+      "sourceAnalysis": "verification-scenario generation: innovations and challenges - 20260902 (a hardware-scanning equivalence example proposed at the methodology design stage, not empirically validated)",
+      "lastUpdatedRound": null,
+      "notes": "corresponds to the example in section 4.4 of equivalence-path-validation-methodology.md: through this edge, the closure of generic BLE scanning (e.g. <ble-scan-API>) covers all core fields of the Beacon-specific API (<beacon-API>), forming a one-sided superset relation delta(Beacon -> generic BLE scanning) = empty set; the reverse does not hold — the Beacon API filters and parses at the system layer, losing non-iBeacon device information and the raw bytes, which is lossy post-processing and irreversible"
+    }
+  ]
+}

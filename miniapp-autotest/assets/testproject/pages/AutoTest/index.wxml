@@ -1,0 +1,103 @@
+<!--miniapp-autotest/assets/testproject/pages/AutoTest/index.wxml-->
+<!-- generic test page template: dynamically renders all registered scenarios -->
+<view class="container">
+  <!-- environment info (always shown) -->
+  <view class="section env-section">
+    <view class="section-header">
+      <text class="section-title">Environment</text>
+    </view>
+    <view class="info-row">
+      <text class="label">Platform: </text>
+      <text class="value">{{platform}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">System: </text>
+      <text class="value">{{systemInfo}}</text>
+    </view>
+    <button class="btn btn-secondary" bindtap="showEnv">Refresh environment info</button>
+  </view>
+
+  <!-- location-and-space domain test anchor: native map component (for MapContext scenarios) -->
+  <!-- A: no center coordinates specified (checks whether the map center under show-location is the user location) -->
+  <view class="section map-section">
+    <text class="section-title">Map anchor A (no center specified + show-location)</text>
+    <map id="permTestMapA"
+         style="width: 100%; height: 200px;"
+         show-location="{{true}}"
+         scale="16"></map>
+  </view>
+  <!-- B: center coordinates specified (control group; center set by the developer) -->
+  <view class="section map-section">
+    <text class="section-title">Map anchor B (center specified + show-location)</text>
+    <map id="permTestMapB"
+         style="width: 100%; height: 200px;"
+         show-location="{{true}}"
+         latitude="39.908860"
+         longitude="116.397390"
+         scale="16"></map>
+  </view>
+
+  <!-- UI-and-interaction domain test anchor: canvas (for canvasToTempFilePath / canvasGetImageData scenarios) -->
+  <view class="section canvas-section">
+    <text class="section-title">Canvas anchor (canvasToTempFilePath / getImageData)</text>
+    <canvas canvas-id="permTestCanvas" style="width: 300px; height: 150px;"></canvas>
+  </view>
+
+  <!-- ecosystem-and-connection domain test anchor: open-data component (for component reachability Layer-1 judgment) -->
+  <view class="section opendata-section">
+    <text class="section-title">Open-data anchor (open-data nickname / avatar)</text>
+    <open-data id="permTestOpenDataNick" type="userNickName"></open-data>
+    <open-data id="permTestOpenDataAvatar" type="userAvatarUrl"></open-data>
+  </view>
+
+  <!-- dynamic scenario region -->
+  <block wx:for="{{scenarios}}" wx:key="id">
+    <view class="section scenario-section">
+      <view class="section-header">
+        <text class="section-title">{{item.title}}</text>
+        <text class="section-desc">{{item.desc}}</text>
+      </view>
+
+      <!-- validation method tags -->
+      <view class="tag-row" wx:if="{{item.hasMethodTags}}">
+        <text class="tag" wx:for="{{item.methodTags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+      </view>
+
+      <!-- preconditions -->
+      <view class="info-row prereq-row" wx:if="{{item.hasPrerequisites}}">
+        <text class="label label-prereq">Preconditions: </text>
+        <text class="value value-prereq">{{item.prerequisites}}</text>
+      </view>
+
+      <!-- action button -->
+      <button class="btn btn-primary"
+              id="BtnScenario_{{item.id}}"
+              data-id="{{item.id}}"
+              bindtap="runScenario">
+        Start test
+      </button>
+
+      <!-- result region -->
+      <view class="result-area" id="Result_{{item.id}}">
+        <text class="result-label">Result: </text>
+        <text class="result-text">{{results[item.id] || 'Awaiting test...'}}</text>
+      </view>
+
+      <!-- log region -->
+      <view class="log-header" wx:if="{{logs[item.id].length > 0}}">
+        <text class="log-title">Run log: </text>
+      </view>
+      <scroll-view class="log-area" scroll-y="true" wx:if="{{logs[item.id].length > 0}}">
+        <text class="log-line" wx:for="{{logs[item.id]}}" wx:for-item="log" wx:key="index">{{log}}</text>
+      </scroll-view>
+    </view>
+  </block>
+
+  <!-- empty state (no registered scenarios) -->
+  <view class="section empty-section" wx:if="{{scenarios.length === 0}}">
+    <view class="section-header">
+      <text class="section-title">No registered scenarios</text>
+      <text class="section-desc">Register test scenarios in the SCENARIOS region of index.js first</text>
+    </view>
+  </view>
+</view>
