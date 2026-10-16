@@ -76,6 +76,23 @@ miniapp-autotest/
     └── testproject/          test project that can be imported directly into the DevTools
 ```
 
+#### Before running: set a test AppID
+
+`assets/testproject/project.config.json` ships with a placeholder AppID:
+
+```json
+"appid": "XXXX"
+```
+
+**You must replace `XXXX` with your own test AppID before running.** The WeChat DevTools CLI cannot open a project or start the automation port without a valid AppID (it fails with `code 31: missing parameter project/appid`).
+
+Options:
+
+- Use a **personal test account** AppID, or
+- Use the **"test number" / no-AppID** mode of the DevTools (note that some APIs are unavailable in this mode, which may affect verification of permission-gated APIs).
+
+This is the only value you need to fill in manually; everything else in the project is ready to import and run.
+
 ---
 
 ## 2. How the Two Skills Cooperate
