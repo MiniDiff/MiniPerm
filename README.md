@@ -85,9 +85,9 @@ Documentation + Code
          │
          ▼
 api-privacy-analysis ── filter → group → transform enumeration → equivalence channel candidates
-         │                                                              │
+         │                                                               │
          │  Step 9 produces "validation scenario + task sheet"           │
-         ▼                                                              │
+         ▼                                                               │
 miniapp-autotest ────── real-device execution, collect output ───────────┘
          │
          ▼  write execution results back
