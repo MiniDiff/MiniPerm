@@ -1,0 +1,65 @@
+{
+  "_note": [
+    "Click targets for alipay_autotest.py, in absolute screen coordinates (pyautogui).",
+    "This calibration was done against a 3840x2160 screen + Alipay Mini Program DevTools + the",
+    "C:\\AlipayMiniProjects\\autotest project, and has been verified end to end (real code injection",
+    "-> compile -> AXML harvest -> log harvest -> log clear).",
+    "",
+    "copy_menu / copy_outer are deprecated and set to [0,0]: AXML harvesting now uses keyboard",
+    "navigation (after the context menu pops up, Down x3 to \"Copy\", Right expands the submenu and",
+    "auto-highlights \"Copy outerAXML\", Enter confirms), so these two coordinates are no longer",
+    "needed. Reason: pyautogui's moveTo/click could not reliably trigger the submenu's hover",
+    "expansion in this Electron app (verified repeatedly across multiple timings and movement",
+    "paths, still failing); keyboard navigation avoids the problem entirely.",
+    "",
+    "Note: the debugger panel's position/height may change if the window is dragged or the split",
+    "view is manually resized; if a coordinate stops working, recalibrate it with",
+    "calibrate_interactive.py.",
+    "scenario_button currently reuses run_all_button's coordinate (the current test page only has",
+    "one global run button)."
+  ],
+  "compile": [
+    3620,
+    140
+  ],
+  "inspector_panel": [
+    690,
+    1635
+  ],
+  "page_node": [
+    650,
+    1680
+  ],
+  "copy_menu": [
+    0,
+    0
+  ],
+  "copy_outer": [
+    0,
+    0
+  ],
+  "console_panel": [
+    815,
+    1635
+  ],
+  "log_last_line": [
+    1500,
+    1850
+  ],
+  "clear_log": [
+    637,
+    1685
+  ],
+  "scenario_button": [
+    3438,
+    825
+  ],
+  "run_all_button": [
+    3438,
+    825
+  ],
+  "refresh_button": [
+    3438,
+    764
+  ]
+}

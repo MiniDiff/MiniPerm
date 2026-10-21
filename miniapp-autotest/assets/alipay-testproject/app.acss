@@ -1,0 +1,4 @@
+/* global styles of the Alipay test project (kept minimal on purpose) */
+page {
+  background-color: #f5f5f5;
+}

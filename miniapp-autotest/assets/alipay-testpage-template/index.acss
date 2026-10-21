@@ -1,0 +1,75 @@
+/* generic test page styles */
+.container { padding: 30rpx; min-height: 100vh; background: #f5f5f5; }
+
+.section {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 30rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.env-section { border-left: 6rpx solid #4A90D9; }
+.scenario-section { border-left: 6rpx solid #52C41A; }
+.empty-section { border-left: 6rpx solid #999; }
+
+.section-header { margin-bottom: 20rpx; }
+.section-title { font-size: 34rpx; font-weight: bold; color: #1B3A5C; }
+.section-desc { font-size: 26rpx; color: #888; display: block; margin-top: 8rpx; }
+
+/* environment info row */
+.info-row { display: flex; margin-bottom: 12rpx; align-items: baseline; }
+.label { font-size: 26rpx; color: #666; width: 140rpx; flex-shrink: 0; }
+.value { font-size: 26rpx; color: #333; flex: 1; word-break: break-all; }
+
+/* validation method tags */
+.tag-row { display: flex; flex-wrap: wrap; gap: 10rpx; margin-bottom: 16rpx; }
+.tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* preconditions */
+.prereq-row { margin-bottom: 16rpx; padding: 16rpx; background: #FFF8E1; border-radius: 8rpx; }
+.label-prereq { color: #F57F17; }
+.value-prereq { color: #E65100; }
+
+/* buttons */
+.btn { margin: 16rpx 0; border-radius: 8rpx; font-size: 28rpx; }
+.btn-primary { color: #fff; background: linear-gradient(135deg, #4A90D9 0%, #357ABD 100%); }
+.btn-secondary { color: #333; background: #f0f0f0; }
+
+/* result region */
+.result-area {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  border: 1rpx solid #eee;
+}
+.result-label { font-size: 26rpx; color: #666; }
+.result-text { font-size: 28rpx; color: #1B3A5C; font-weight: bold; }
+
+/* log region */
+.log-header { margin-top: 20rpx; }
+.log-title { font-size: 24rpx; color: #999; }
+.log-area {
+  margin-top: 10rpx;
+  max-height: 400rpx;
+  background: #1e1e1e;
+  border-radius: 8rpx;
+  padding: 16rpx;
+}
+.log-line {
+  display: block;
+  font-size: 22rpx;
+  color: #d4d4d4;
+  font-family: 'Courier New', monospace;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

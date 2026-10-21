@@ -61,37 +61,51 @@ api-privacy-analysis/
 
 ### 1.3 `miniapp-autotest/`
 
-The **verification execution engine**. It is a pure execution / orchestration layer that performs no semantic judgment — it receives the validation task sheet produced by `api-privacy-analysis`, actually runs the mini-program in the WeChat DevTools, collects output and screenshots, and writes results back.
+The **verification execution engine**. It is a pure execution / orchestration layer that performs no semantic judgment — it receives the validation task sheet produced by `api-privacy-analysis`, actually runs the mini-program, collects output, and writes results back. It supports two platforms: **WeChat** (fully automated, driven via `miniprogram-automator`) and **Alipay** (GUI automation, driven via `pyautogui`); the caller must tell it which platform to target, and this skill decides the concrete script/parameters/output format on its own — see its `SKILL.md`, "Platform and Script Selection", for the full dispatch rule.
 
 ```
 miniapp-autotest/
-├── SKILL.md                  entry point: interfacing with the WeChat DevTools CLI / automation
-├── auto.js                   automation main script (launch, inject cases, collect console/screenshots, write back)
-├── run_all.bat               one-click Windows entry point
+├── SKILL.md                      entry point: platform selection, WeChat DevTools automation, Alipay GUI automation
+├── auto.js                       WeChat automation main script (launch, inject cases, collect console/screenshots, write back)
+├── run_all.bat                   WeChat one-click Windows entry point
+├── alipay_autotest.py            Alipay automation main script (pyautogui GUI driver)
+├── alipay_coords.json            Alipay click-coordinate config (machine-specific, needs calibration)
+├── calibrate_interactive.py      Alipay interactive coordinate calibration (manual, item by item)
+├── calibrate_shot.py             Alipay screenshot-based coordinate calibration (for an image-capable model)
 ├── references/
-│   ├── template-guide.md     case template authoring guide
-│   └── testplan-schema.md    testplan structure definition
+│   ├── template-guide.md         case template authoring guide
+│   └── testplan-schema.md        testplan structure definition (WeChat only)
 └── assets/
-    ├── testpage-template/    blank case page template (index.js / .wxml / .wxss)
-    └── testproject/          test project that can be imported directly into the DevTools
+    ├── testpage-template/        WeChat blank case page template (index.js / .wxml / .wxss)
+    ├── testproject/               WeChat test project that can be imported directly into the DevTools
+    ├── alipay-testpage-template/  Alipay blank case page template (index.js / .axml / .acss)
+    └── alipay-testproject/        Alipay test project
 ```
 
 #### Before running: set a test AppID
 
-`assets/testproject/project.config.json` ships with a placeholder AppID:
+Both platforms' test projects ship with a placeholder AppID; you must replace it with your own before running.
+
+**WeChat** — `assets/testproject/project.config.json`:
 
 ```json
 "appid": "XXXX"
 ```
 
-**You must replace `XXXX` with your own test AppID before running.** The WeChat DevTools CLI cannot open a project or start the automation port without a valid AppID (it fails with `code 31: missing parameter project/appid`).
-
-Options:
+The WeChat DevTools CLI cannot open a project or start the automation port without a valid AppID (it fails with `code 31: missing parameter project/appid`). Options:
 
 - Use a **personal test account** AppID, or
 - Use the **"test number" / no-AppID** mode of the DevTools (note that some APIs are unavailable in this mode, which may affect verification of permission-gated APIs).
 
-This is the only value you need to fill in manually; everything else in the project is ready to import and run.
+**Alipay** — `assets/alipay-testproject/mini.project.json`:
+
+```json
+"appid": "XXXX"
+```
+
+Use your own Alipay mini-program test AppID. The Alipay path additionally requires `alipay_coords.json` to be **calibrated on the current machine** before running (coordinates are absolute screen pixels and do not transfer across machines/resolutions/window layouts) — use `calibrate_interactive.py` (no image reading required) or `calibrate_shot.py` (requires an image-capable model); see `miniapp-autotest`'s `SKILL.md`, "Alipay Platform Support", for the full procedure.
+
+These AppIDs are the only values you need to fill in manually; everything else in the projects is ready to import and run.
 
 ---
 
@@ -105,7 +119,7 @@ api-privacy-analysis ── filter → group → transform enumeration → equiv
          │                                                               │
          │  Step 9 produces "validation scenario + task sheet"           │
          ▼                                                               │
-miniapp-autotest ────── real-device execution, collect output ───────────┘
+miniapp-autotest ────── executes on the target platform, collect output ─┘
          │
          ▼  write execution results back
 api-privacy-analysis ── Step 11 adjudication → Step 12 tiering → Step 13 report
@@ -141,12 +155,12 @@ Analysis proceeds domain by domain. The list of functional domains:
 
 ### 3.2 Analysis Command
 
-Iterate over the table above: fill the current functional domain into the `XXX` slots and the input paths / result directory into the `&&&` slots, then **execute the command once per domain**, saving each domain's result into the results folder.
+Iterate over the table above: fill the current functional domain into the `XXX` slots, the input paths / result directory into the `&&&` slots, and the target mini-program platform into the `@@@` slot, then **execute the command once per domain**, saving each domain's result into the results folder.
 
-Command template (copy it and replace `XXX` and `&&&`):
+Command template (copy it and replace `XXX`, `&&&`, and `@@@`):
 
 ```
-Use the api-privacy-analysis skill. The input files are: documentation part &&&, and code part &&&. Analyze XXX-class APIs (for example XXX, and so on), covering all relevant APIs as completely as possible. Focus on finding paths that can obtain equivalent data or control the same hardware but require different permissions. Use miniapp-autotest to verify and test the issues discovered. Write the analysis results into XXX-class-API-analysis.md. Do not use historical data; do not omit vulnerabilities that have been analyzed before — re-analyze them and write them into the report. Note that every step of the procedure must be executed strictly according to the rules. Save the documentation API filtering results, the code API filtering results, the grouping results including each group's content, and the comparison pair sequences as "<domain>-<step>.md" files into the results folder.
+Use the api-privacy-analysis skill. The input files are: documentation part &&&, and code part &&&. Analyze XXX-class APIs (for example XXX, and so on), covering all relevant APIs as completely as possible. Focus on finding paths that can obtain equivalent data or control the same hardware but require different permissions. Use miniapp-autotest (target platform: @@@) to verify and test the issues discovered. Write the analysis results into XXX-class-API-analysis.md. Do not use historical data; do not omit vulnerabilities that have been analyzed before — re-analyze them and write them into the report. Note that every step of the procedure must be executed strictly according to the rules. Save the documentation API filtering results, the code API filtering results, the grouping results including each group's content, and the comparison pair sequences as "<domain>-<step>.md" files into the results folder.
 ```
 
 ### 3.3 Placeholder Meanings
@@ -158,11 +172,12 @@ Use the api-privacy-analysis skill. The input files are: documentation part &&&,
 | `&&&` (3rd) | results output folder | `results/` |
 | `XXX` (1st, 2nd) | current functional domain name | `Location and Space` |
 | `XXX` (3rd) | domain name used in the report filename | `Location-and-Space-class-API-analysis.md` |
+| `@@@` | target mini-program platform, telling `miniapp-autotest` which one to drive — must be exactly `WeChat` or `Alipay` (the concrete script/parameters/output format for that platform are decided by `miniapp-autotest` itself, not by this command) | `WeChat` |
 
-Filled example, using the domain **Location and Space**:
+Filled example, using the domain **Location and Space** on the **WeChat** platform:
 
 ```
-Use the api-privacy-analysis skill. The input files are: documentation part docs/api_doc/, and code part code/WAService.js. Analyze Location and Space-class APIs (for example getLocation, getFuzzyLocation, and so on), covering all relevant APIs as completely as possible. Focus on finding paths that can obtain equivalent data or control the same hardware but require different permissions. Use miniapp-autotest to verify and test the issues discovered. Write the analysis results into Location-and-Space-class-API-analysis.md. Do not use historical data; do not omit vulnerabilities that have been analyzed before — re-analyze them and write them into the report. Note that every step of the procedure must be executed strictly according to the rules. Save the documentation API filtering results, the code API filtering results, the grouping results including each group's content, and the comparison pair sequences as "Location-and-Space-<step>.md" files into the results folder.
+Use the api-privacy-analysis skill. The input files are: documentation part docs/api_doc/, and code part code/WAService.js. Analyze Location and Space-class APIs (for example getLocation, getFuzzyLocation, and so on), covering all relevant APIs as completely as possible. Focus on finding paths that can obtain equivalent data or control the same hardware but require different permissions. Use miniapp-autotest (target platform: WeChat) to verify and test the issues discovered. Write the analysis results into Location-and-Space-class-API-analysis.md. Do not use historical data; do not omit vulnerabilities that have been analyzed before — re-analyze them and write them into the report. Note that every step of the procedure must be executed strictly according to the rules. Save the documentation API filtering results, the code API filtering results, the grouping results including each group's content, and the comparison pair sequences as "Location-and-Space-<step>.md" files into the results folder.
 ```
 
 ---

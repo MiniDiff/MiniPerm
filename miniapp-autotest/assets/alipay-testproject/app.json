@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "pages/AutoTest/index"
+  ],
+  "window": {
+    "defaultTitle": "AutoTest",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black"
+  },
+  "lazyCodeLoading": "renderedComponents"
+}

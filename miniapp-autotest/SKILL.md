@@ -1,6 +1,15 @@
 # Mini-Program Automated Test Framework (miniapp-autotest)
 
-> **Positioning**: a generic WeChat mini-program API runtime testing framework. Not bound to any concrete API or analysis scenario; reusable by the empirical-testing stage of any analysis workflow (privacy analysis, performance analysis, functional validation, etc.).
+> **Positioning**: a generic mini-program API runtime testing framework, not bound to any concrete API or analysis scenario, reusable by the empirical-testing stage of any analysis workflow (privacy analysis, performance analysis, functional validation, etc.). Currently supports two platforms: **WeChat** (fully automated, driven via `miniprogram-automator`) and **Alipay** (GUI automation, driven via `pyautogui`). The two platforms use different scripts and have different automation levels — see "Platform and Script Selection" below.
+
+## Platform and Script Selection
+
+| Platform | Execution script | Automation level | Core dependencies | Result output |
+|---|---|---|---|---|
+| WeChat | `auto.js` (wraps `miniprogram-automator`) | **Fully automated** — IDE connection, step execution, log/screenshot collection all require no manual intervention; supports the DevTools simulator and real devices | Node.js, WeChat DevTools, `miniprogram-automator` | `<testName>_<timestamp>/{summary.json, console.log, *.png}` |
+| Alipay | `alipay_autotest.py` (`pyautogui` GUI automation) | **Semi-automated** — relies on simulated clicks at absolute screen coordinates; recalibration is required whenever the machine, resolution, or window layout changes | Python, `pyautogui`, Alipay Mini Program DevTools | `<case>/<platform>/<conf>/{index.html, log.txt}` |
+
+**The only selection criterion is which platform the target mini-program runs on** — the two paths are not interchangeable, and there is no "switch to whichever performs better" option. The WeChat path has an official runtime automation SDK and can run unattended batches; Alipay has no official equivalent (see "Alipay Platform Support" below), so it falls back to screen-coordinate driving, which is **inherently less reliable** and must be recalibrated via `calibrate_interactive.py` on every new machine. The caller (e.g. Step 11 of `api-privacy-analysis`) should first confirm the target platform of the current analysis, then decide which script to invoke — the two paths' testPlan/scenario-code formats, CLI parameters, and result directory structures are **not interchangeable**; see their respective sections below.
 
 ## Core Capabilities
 
@@ -28,18 +37,28 @@ When outputting decision conclusions via `this._log()` in a scenario `handler`, 
 ```
 .codebuddy/skills/miniapp-autotest/  ← skill root
 ├── SKILL.md
-├── auto.js                      # execution engine (miniprogram-automator wrapper)
-├── run_all.bat                  # one-click batch launcher (takes testPlan path arguments)
+├── auto.js                      # WeChat execution engine (miniprogram-automator wrapper)
+├── run_all.bat                  # WeChat one-click batch launcher (takes testPlan path arguments)
+├── alipay_autotest.py           # Alipay execution engine (pyautogui GUI automation)
+├── alipay_coords.json           # Alipay click-coordinate config (machine-specific, needs calibration)
+├── calibrate_interactive.py     # Alipay interactive coordinate calibration tool (manual, item by item)
+├── calibrate_shot.py            # Alipay screenshot calibration tool (for use with an image-capable model)
 ├── references/                  # reference docs
 │   ├── template-guide.md        # template usage guide
-│   └── testplan-schema.md       # TestPlan JSON structure definition
+│   └── testplan-schema.md       # TestPlan JSON structure definition (WeChat only)
 ├── assets/
-│   ├── testpage-template/       # generic test-page template (for starting new projects)
-│   └── testproject/             # mini-program test project
+│   ├── testpage-template/       # WeChat generic test-page template (for starting new projects)
+│   ├── testproject/             # WeChat mini-program test project
+│   │   └── pages/AutoTest/
+│   │       ├── index.js         # generic test page (scenario registration mode)
+│   │       ├── index.wxml       # generic UI template
+│   │       └── index.wxss       # styles
+│   ├── alipay-testpage-template/ # Alipay generic test-page template
+│   └── alipay-testproject/      # Alipay mini-program test project
 │       └── pages/AutoTest/
-│           ├── index.js         # generic test page (scenario registration mode)
-│           ├── index.wxml       # generic UI template
-│           └── index.wxss       # styles
+│           ├── index.js         # generic test page (scenario registration mode, my.* implementation)
+│           ├── index.axml       # generic UI template
+│           └── index.acss       # styles
 ```
 ```
 <workspace_root>/autotest/       # test result output directory
@@ -69,7 +88,9 @@ When outputting decision conclusions via `this._log()` in a scenario `handler`, 
 3. **Group directory naming**: `<domain>-<YYYYMMDD>`; the date must use the **full 8-digit year-month-day** (never short unpadded forms like `8-5` / `8-11` — short forms sort wrongly in lexicographic order, e.g. `"8-11"` would sort before `"8-5"`).
 4. **Pairing with the `tmp/` side**: if that validation task has a corresponding analysis-process directory under `tmp/` (e.g. `tmp/<domain>analysis-<YYYYMMDD>/`), then the `<domain>` string must be **exactly the same** as on the `tmp/` side (suffixes such as "analysis" / "test" may distinguish the nature, but the head word and the date must not change), ensuring that the directory name alone shows both sides belong to the same task. See the intermediate-artifact and result-material management rules of the `api-privacy-analysis` skill.
 
-## Quick Start
+## Quick Start (WeChat · `auto.js`)
+
+> The Alipay path's quick start is in the "Alipay Platform Support" section of this document; the two paths' test-code directories and CLI invocation methods are not the same.
 
 ### 1. Prepare the Test Code
 
@@ -145,7 +166,7 @@ node .codebuddy/skills/miniapp-autotest/auto.js --batch --clear-auth --auto-auth
 
 After the test completes, a timestamped subdirectory is generated under `autotest/TestResult/` (or the specified group subdirectory), containing `console.log`, `step_results.json`, `summary.json`, and all screenshots. Batch mode additionally generates `batch_report_*.md`.
 
-## Real-Device Testing Mode (RealDevice)
+## Real-Device Testing Mode (WeChat RealDevice)
 
 Running tests on a real device can validate behavior the simulator cannot cover (e.g. real authorization prompts, Bluetooth hardware, NFC).
 
@@ -198,7 +219,9 @@ node .codebuddy/skills/miniapp-autotest/auto.js \
 - Automatic permission-prompt clicking (`--auto-authorize`) may not fully automate on a real device
 - In real-device mode, assertion-text checks may fail due to rendering differences; relax them appropriately
 
-## TestPlan Operation Types
+## TestPlan Operation Types (WeChat `auto.js` only)
+
+> The Alipay path does not use testPlan JSON; it is driven directly by CLI parameters — see "Alipay Platform Support" below.
 
 | Type | Required fields | Description |
 |---|---|---|
@@ -229,9 +252,9 @@ node .codebuddy/skills/miniapp-autotest/auto.js \
 | `--result-path` | `./autotest/TestResult/` | Result directory. When multiple testPlans belong to the same validation task, pass an explicit group subdirectory `autotest/TestResult/<domain>-<YYYYMMDD>`; see "Result Directory Naming and Grouping Rules" above |
 | `--no-report` | — | Disable aggregate report generation |
 
-## Built-in Helper Methods of the Generic Test Page
+## Built-in Helper Methods of the Generic Test Page (WeChat test-page template)
 
-The template `index.js` provides the following helpers, usable directly in a scenario `handler`:
+The WeChat template `index.js` (`assets/testproject/`) provides the following helpers, usable directly in a scenario `handler`; the Alipay test-page template (`assets/alipay-testpage-template/`) provides the same set of method names, with the internal implementation switched to `my.*` — see "Alipay Platform Support" below:
 
 | Method | Description |
 |---|---|
@@ -244,32 +267,101 @@ The template `index.js` provides the following helpers, usable directly in a sce
 
 ## Template Button and Result-Area ID Rules
 
-The template renders scenarios dynamically via `wx:for`. Each scenario's DOM IDs are:
+The WeChat template renders scenarios dynamically via `wx:for` (the Alipay template uses `a:for`; the naming rule is the same). Each scenario's DOM IDs are:
 
 - Button: `BtnScenario_{scenarioId}`
 - Result: `Result_{scenarioId}`
 - Log: `Log_{scenarioId}`
 
-A testPlan's `selector` must use these naming rules. For example, with scenario ID `VF-1`:
+On the WeChat path, a testPlan's `selector` must use these naming rules. For example, with scenario ID `VF-1`:
 - `"selector": "#BtnScenario_VF-1"`
 - `"assertSelector": "#Result_VF-1"`
+
+The Alipay path does not use a selector (GUI coordinate clicks are used instead), but the scenario page itself follows the same ID naming convention, for easier manual cross-checking.
 
 ## Collaboration Mode With Upper-Layer Skills
 
 This skill is a **low-level generic framework**, containing no test logic for any concrete API and no code-generation capability — this skill is a pure execution engine. An upper-layer skill (e.g. `api-privacy-analysis`), on top of this skill:
 
-1. designs the operation procedure in its Step 10 (empirical code generation), and writes scenario-registration code per this skill's template → `assets/testpage-template/` — **the code-authoring responsibility lies with the upper-layer skill's Step 10, because this skill itself does not understand the privacy-analysis validation logic of concrete APIs**
-2. before generating scenario code, **first checks whether `index.js`'s `SCENARIOS` region holds leftovers from the previous task** — if so, clear it entirely before filling in this run's scenarios (clearing and filling are merged into one single edit, not split); if empty, fill it directly
-3. generates the testPlan JSON (button IDs following the template rules; `wait` durations determined from the operation-procedure design and the code's actual internal wait logic), persisting to `tmp/<domain>analysis-<YYYYMMDD>/`
-4. in its Step 11 (empirical execution), deploys the code generated by Step 10, invokes this skill's `auto.js` to execute tests (run from the workspace root), and passes via `--result-path` the group directory `autotest/TestResult/<domain>test-<YYYYMMDD>/` paired by name with the tmp side
+> The flow below is described using the **WeChat path** (`auto.js` + testPlan JSON) as the example. **The Alipay path has the same structure but different artifacts**: scenario code is injected into `assets/alipay-testproject/pages/AutoTest/index.js` (instead of `assets/testproject/`), no testPlan JSON is generated (`alipay_autotest.py` is driven directly by CLI parameters, needing no step-level JSON description), and the archive target is likewise the `SCENARIOS` code. The caller should first determine the target platform of the current analysis, then decide which set of artifacts and which execution script to use — the two must not be mixed.
+
+1. designs the operation procedure in its Step 10 (empirical code generation), and writes scenario-registration code per this skill's template (WeChat → `assets/testpage-template/`; Alipay → `assets/alipay-testpage-template/`) — **the code-authoring responsibility lies with the upper-layer skill's Step 10, because this skill itself does not understand the privacy-analysis validation logic of concrete APIs**
+2. before generating scenario code, **first checks whether the corresponding platform's `index.js`'s `SCENARIOS` region holds leftovers from the previous task** — if so, clear it entirely before filling in this run's scenarios (clearing and filling are merged into one single edit, not split); if empty, fill it directly
+3. on the **WeChat path**, additionally generates the testPlan JSON (button IDs following the template rules; `wait` durations determined from the operation-procedure design and the code's actual internal wait logic), persisting to `tmp/<domain>analysis-<YYYYMMDD>/`; **the Alipay path has no such step**
+4. in its Step 11 (empirical execution), deploys the code generated by Step 10, **invokes the script that matches the target platform** to execute tests (run from the workspace root): WeChat invokes this skill's `auto.js`, Alipay invokes `alipay_autotest.py` (see "Platform and Script Selection" above); and passes via `--result-path` the group directory `autotest/TestResult/<domain>test-<YYYYMMDD>/` paired by name with the tmp side
 5. collects results from that group directory; on execution anomalies, first judge whether it is a "mechanical minor problem" (Step 11 fixes and retries directly) or "concerns the validation logic itself" (return to Step 10 to fix the code), triggering the Step 10↔11 correction loop
-6. **immediately after the correction loop terminates, copy and archive the `SCENARIOS` code** into the corresponding `tmp/` analysis directory; `index.js` is **not cleared for now** and the code is kept as-is, to be cleared and replaced uniformly at the next new task's Step 10 (returning to item 2 of this list)
+6. **immediately after the correction loop terminates, copy and archive the `SCENARIOS` code** into the corresponding `tmp/` analysis directory; `index.js` (the one for the relevant platform) is **not cleared for now** and the code is kept as-is, to be cleared and replaced uniformly at the next new task's Step 10 (returning to item 2 of this list)
 
 > The directory naming and archiving rules for both `tmp/` (intermediate artifacts: analysis documents, testPlans, scenario-code archives) and `autotest/TestResult/` (result artifacts: logs, screenshots, summary) are defined by the upper-layer skill; this skill only guarantees that the `--result-path` parameter is passed and used correctly, and does not decide the grouping policy itself.
 >
 > **`index.js` is the active test page shared by all analysis tasks**; this skill does not automatically archive or clear `SCENARIOS` after test execution ends (`auto.js` only executes the given scenarios and does not manage scenario-code lifecycle). Therefore **the responsibility for archiving and clearing lies with the caller, and the two happen at different times**: once a test task has definitively ended, **immediately** copy the `SCENARIOS` region's code into `tmp/` to archive it (guaranteeing a deterministic archive independent of later events), but **do not clear** `index.js` — leave it for the next new task's Step 10 to generate code, merging clearing with "injecting new scenario code" into one single operation and replacing then, avoiding `index.js` sitting in a meaningless empty-scenario state for long. The concrete archiving flow and timing are defined by "Stage 4: Code Archiving" in the `api-privacy-analysis` skill's `references/execution-and-feedback.md`; other upper-layer skills reusing this skill should likewise follow the same principle of "archive immediately, defer clearing to the next task".
 
-## Known Runtime Compatibility Issues
+## Alipay Platform Support (GUI Automation)
+
+Alipay has **no official runtime automation SDK** — there is no equivalent of `miniprogram-automator`, and the Alipay DevTools exposes no automation port. Therefore the WeChat path (`auto.js` + `miniprogram-automator`) is unavailable; Alipay execution is driven through **GUI automation with pyautogui** instead.
+
+### Related Files
+
+| File | Purpose |
+|---|---|
+| `alipay_autotest.py` | pyautogui driver: inject case code → compile → click → harvest AXML + console log |
+| `alipay_coords.json` | click targets in absolute screen coordinates |
+| `calibrate_interactive.py` | interactive calibration (no image reading required): the script prompts for each target, you move the mouse there and press Enter |
+| `calibrate_shot.py` | screenshot-based calibration: takes a screenshot for an image-capable model to read and return coordinates |
+| `assets/alipay-testproject/` | Alipay project template (`.axml` / `.js` / `.acss` / `mini.project.json`) |
+| `assets/alipay-testpage-template/` | Alipay test-page template, the counterpart of `testpage-template/` |
+
+### Setup
+
+```bash
+pip install pyautogui          # required; pyperclip is an optional clipboard fallback
+```
+
+Coordinates are **absolute screen coordinates**, so they depend on window layout and display scaling — **they must be calibrated on each machine before use**. Two calibration paths are available:
+
+- **`calibrate_interactive.py`** (recommended, no image reading required): run `python calibrate_interactive.py`, move the mouse to each prompted target and press Enter to record it; right-click-menu items are located automatically by first popping the menu, then prompting for the submenu position.
+- **`calibrate_shot.py`** (requires an image-capable model): run `python calibrate_shot.py` to take a screenshot, then have a multimodal model read `tmp/shots/screen_view.png` and return each target's pixel position (the real coordinate equals the view-image coordinate × 2, since the view copy is half-scale).
+
+A target set to `[0, 0]` in `alipay_coords.json` is skipped at runtime.
+
+### Run
+
+```bash
+python alipay_autotest.py \
+  --project-path C:\AlipayMiniProjects\autotest \
+  --page pages/AutoTest \
+  --result-path ../AutoTestResult \
+  --coords alipay_coords.json
+```
+
+Per case the driver: copies `index.axml` / `index.js` / `index.acss` over the project page, clicks compile, optionally clicks the simulator buttons, then harvests the rendered AXML and the console log, finally clearing the console. Results land in `<result-path>/<case>/<platform>/<conf>/{index.html, log.txt}` — **the same layout as the WeChat path**, so the existing Analyzer works unchanged.
+
+**AXML harvesting uses keyboard navigation, not mouse hover.** Sequence: Inspector → right-click the page node to pop the context menu → `Down` three times to select "Copy" → `Right` to expand the submenu ("Copy outerAXML" is auto-highlighted) → `Enter` to confirm. This is a fix derived from an actual failure: pyautogui's `moveTo`/`click` **could not reliably trigger the submenu's hover expansion** in this Electron app (verified across multiple timings and movement paths — the cursor genuinely reached the target pixel, but the submenu simply would not appear). Keyboard-arrow navigation avoids the problem entirely, and no longer depends on the precise coordinates of `copy_menu` / `copy_outer` (both are kept as deprecated `[0, 0]` placeholders in `alipay_coords.json` for backward compatibility).
+
+Console-log harvesting: console panel → click the content area → `Ctrl+A` / `Ctrl+C` → clear button. This coordinate-click path is reliable and has been verified end to end.
+
+`--dry-run` prints every action without moving the mouse. Note that it still performs the file copy (that part is safe and useful for verifying injection), so **do not point `--dry-run` at a project you care about**.
+
+### Platform Differences (WeChat → Alipay)
+
+| Aspect | WeChat | Alipay |
+|---|---|---|
+| runtime global | `wx` | `my` |
+| auth query | `wx.getSetting` | `my.getAuthSetting` |
+| toast | `wx.showToast({title})` | `my.showToast({content})` |
+| template / style / script suffix | `.wxml` / `.wxss` / `.wxs` | `.axml` / `.acss` / `.sjs` |
+| loop / condition / item | `wx:for` / `wx:if` / `wx:for-item` | `a:for` / `a:if` / `a:for-item` |
+| event binding | `bindtap` | `onTap` |
+| project config | `project.config.json` | `mini.project.json` |
+| `<open-data>` | available | **not available** — that anchor is dropped |
+
+Alipay returns **bare scope names** (`location`, `album`, `camera`, …) rather than WeChat's `scope.xxx`. The Alipay template's `_extractAuthData` accepts any boolean-valued field, so the same scenario code runs on both platforms.
+
+### Known Limitations
+
+Without a runtime automation port this path is **inherently less reliable** than the WeChat one: it depends on window geometry, is sensitive to pop-ups and focus loss, and cannot assert on the component tree programmatically. Prefer the WeChat path when both are available; use this one only for Alipay.
+
+## Known Runtime Compatibility Issues (WeChat `auto.js`)
 
 `auto.js` may encounter two classes of known system-environment compatibility problem during `automator.launch()`. Their shared feature is that **the error message does not match the actual root cause**, easily misleading users into repeatedly investigating unrelated items. `auto.js` has built-in precise diagnostic hints — output only when an error actually occurs.
 

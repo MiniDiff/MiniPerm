@@ -20,6 +20,8 @@
 
 ## Execution Flow
 
+> **Tell it the platform; don't restate its rules**: `miniapp-autotest` supports both WeChat and Alipay, and each platform's execution script, deployment directory, CLI parameters, and output format are determined entirely within that skill (see its `SKILL.md`, "Platform and Script Selection"); this rule does not restate them. This step only needs to **explicitly tell it the target platform** (WeChat or Alipay) when invoking it — how exactly to deploy, invoke, and what the output looks like is decided by `miniapp-autotest`'s own rules. Stages 1-4 below use the WeChat path as an example to illustrate the overall flow structure ("deploy → execute → collect → archive"); when the target is Alipay, the flow structure is the same, only the concrete commands/directories/output formats change to follow `miniapp-autotest`'s Alipay rules.
+
 ### Stage 1: Deploy Test Code
 
 Write the scenario-registration code produced by Step 10 into the "scenario registration" region of the general template:
@@ -58,6 +60,8 @@ node .codebuddy/skills/miniapp-autotest/auto.js --batch --clear-auth --auto-auth
   --result-path "autotest/TestResult/<domain>test-<YYYYMMDD>"
 ```
 
+> The commands above use the WeChat path as an example. When the target is an Alipay mini program, invoke `miniapp-autotest` per that skill's own rules (script, parameters, whether a testPlan is needed) — this rule does not restate them; just tell it the target platform when invoking it.
+>
 > **Default platform policy: use DevTools uniformly within the main analysis flow, deferring real device until after report delivery** (RealDevice requires a human to scan a QR code on site; it is a synchronous blocking operation, and if the analyst is not present it will hang on the scan until timeout): even when the Step 10 operation-procedure design annotates "RealDevice required" (e.g. hardware APIs), Step 11 **still executes under DevTools by default** in the main flow and does not switch platforms to wait for a scan. Scenarios that can partially run under DevTools are executed as usual with a "partial validation conclusion" recorded; scenarios that cannot run at all are marked "environment limitation, cannot be validated under DevTools" (not counted as a correction-loop failure round, not judged a code error). Both cases are collected into the "real-device follow-up list" delivered to Step 12, deferred until the user confirms they are present and can scan — see "Real-Device Follow-Up Flow" at the end of this file. **Exception**: if the user has already stated in the current conversation that they are by a real device now and willing to scan in real time, RealDevice may be executed directly in the main flow rather than forcibly deferred to the end. `--clear-auth` has no effect in real-device mode (authorization state is managed by WeChat on the phone).
 >
 > **Naming and grouping rules**: `--result-path` must be passed explicitly and **paired by identical name** with the analysis directory on the `tmp/` side — the `<domain>` string must match exactly (only the "analysis" vs "test" suffix distinguishes the nature), and the date must match exactly using the full 8-digit form (`YYYYMMDD`; unpadded short forms such as `8-5` are not allowed and cause incorrect lexicographic ordering). In this way, all testPlan results of one validation task aggregate automatically into one directory, with no need for manual merging afterward. Full rules are in `SKILL.md`, "Execution Conventions". The real-device follow-up stage continues with the same group directory and does not create a new date group.
@@ -68,11 +72,13 @@ node .codebuddy/skills/miniapp-autotest/auto.js --batch --clear-auth --auto-auth
 
 ### Stage 3: Result Collection and Interpretation
 
-Extract from `autotest/TestResult/<domain>test-<YYYYMMDD>/<testName>_<timestamp>/`:
+Extract from `autotest/TestResult/<domain>test-<YYYYMMDD>/<testName>_<timestamp>/` (WeChat path example):
 - `console.log` — the complete mini-program-side log
 - `*.png` — screenshots (entry / steps / error scene / final state)
 - `summary.json` — test summary (status, step count, log entry count)
 - In batch mode, `batch_report_*.md` and `last_result.json` are additionally generated in the group directory
+
+The Alipay path's output directory structure, file names, and field meanings differ from the WeChat path; defer to the `miniapp-autotest` skill's documentation rather than restating them here.
 
 **Interpret against the Step 10 operation-procedure design**: for example, if an authorization prompt is observed at some node, first check whether the operation-procedure design predicted that this node would trigger authorization — if it matches the prediction, the code behavior conforms to expectations and can be classified normally by the decision criteria; if the design predicted "no authorization should appear" but it did, this may be an important finding (the hypothesis validated by this scenario may not hold) rather than a code error, and should not be rashly "fixed" as a bug — **at this point one should transfer to the "Qualitative-Validation Loop" section below to complete the routing decision (which of Steps 8/9/10 to fall back to), rather than guessing within this stage**.
 

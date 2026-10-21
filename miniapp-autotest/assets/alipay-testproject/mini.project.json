@@ -1,0 +1,7 @@
+{
+  "format": 2,
+  "appid": "XXXX",
+  "compileOptions": {
+    "component2": true
+  }
+}
